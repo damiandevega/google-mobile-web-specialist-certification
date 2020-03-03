@@ -40,6 +40,7 @@ function readResponseAsBlob(response) {
 }
 
 function readResponseAsText(response) {
+  console.log(response.headers.get('content-length'));
   return response.text();
 }
 
@@ -98,7 +99,13 @@ textButton.addEventListener('click', fetchText);
 // HEAD request ----------
 
 function headRequest() {
-  // TODO
+  fetch('examples/words.txt', {
+    method: 'HEAD',
+  })
+    .then(validateResponse)
+    .then(readResponseAsText)
+    .then(logResult)
+    .catch(logError);
 }
 const headButton = document.getElementById('head-btn');
 headButton.addEventListener('click', headRequest);
