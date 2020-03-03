@@ -35,6 +35,18 @@ function readResponseAsJSON(response) {
   return response.json();
 }
 
+function readResponseAsBlob(response) {
+  return response.blob();
+}
+
+function showImage(responseAsBlob) {
+  const container = document.getElementById('img-container');
+  const imgElem = document.createElement('img');
+  container.appendChild(imgElem);
+  const imgUrl = URL.createObjectURL(responseAsBlob);
+  imgElem.src = imgUrl;
+}
+
 
 // Fetch JSON ----------
 
@@ -52,7 +64,11 @@ jsonButton.addEventListener('click', fetchJSON);
 // Fetch Image ----------
 
 function fetchImage() {
-  // TODO
+  fetch('examples/fetching.jpg')
+    .then(validateResponse)
+    .then(readResponseAsBlob)
+    .then(showImage)
+    .catch(logError);
 }
 const imgButton = document.getElementById('img-btn');
 imgButton.addEventListener('click', fetchImage);
