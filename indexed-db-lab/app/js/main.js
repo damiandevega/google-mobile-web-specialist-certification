@@ -21,7 +21,7 @@ var idbApp = (function () {
     return;
   }
 
-  var dbPromise = idb.open('couches-n-things', 2, function (upgradeDb) {
+  var dbPromise = idb.open('couches-n-things', 4, function (upgradeDb) {
     switch (upgradeDb.oldVersion) {
       case 0:
       // a placeholder case so that the switch block will 
@@ -30,8 +30,15 @@ var idbApp = (function () {
       case 1:
         console.log('Creating the products object store');
         upgradeDb.createObjectStore('products', { keyPath: 'id' });
-
-      // TODO 4.1 - create 'name' index
+      case 2:
+        console.log('Creating a name index');
+        var store = upgradeDb.transaction.objectStore('products');
+        store.createIndex('name', 'name', { unique: true });
+      case 3:
+        console.log('Creating a name index');
+        var store = upgradeDb.transaction.objectStore('products');
+        store.createIndex('price', 'price');
+        store.createIndex('description', 'description');
 
       // TODO 4.2 - create 'price' and 'description' indexes
 
@@ -114,9 +121,12 @@ var idbApp = (function () {
   }
 
   function getByName(key) {
-
-    // TODO 4.3 - use the get method to get an object by name
-
+    return dbPromise.then(function (db) {
+      var tx = db.transaction('products', 'readonly');
+      var store = tx.objectStore('products');
+      var index = store.index('name');
+      return index.get(key);
+    });
   }
 
   function displayByName() {
@@ -139,9 +149,39 @@ var idbApp = (function () {
   }
 
   function getByPrice() {
+    var lower = document.getElementById('priceLower').value;
+    var upper = document.getElementById('priceUpper').value;
+    var lowerNum = Number(document.getElementById('priceLower').value);
+    var upperNum = Number(document.getElementById('priceUpper').value);
 
-    // TODO 4.4a - use a cursor to get objects by price
-
+    if (lower === '' && upper === '') { return; }
+    var range;
+    if (lower !== '' && upper !== '') {
+      range = IDBKeyRange.bound(lowerNum, upperNum);
+    } else if (lower === '') {
+      range = IDBKeyRange.upperBound(upperNum);
+    } else {
+      range = IDBKeyRange.lowerBound(lowerNum);
+    }
+    var s = '';
+    dbPromise.then(function (db) {
+      var tx = db.transaction('products', 'readonly');
+      var store = tx.objectStore('products');
+      var index = store.index('price');
+      return index.openCursor(range);
+    }).then(function showRange(cursor) {
+      if (!cursor) { return; }
+      console.log('Cursored at:', cursor.value.name);
+      s += '<h2>Price - ' + cursor.value.price + '</h2><p>';
+      for (var field in cursor.value) {
+        s += field + '=' + cursor.value[field] + '<br/>';
+      }
+      s += '</p>';
+      return cursor.continue().then(showRange);
+    }).then(function () {
+      if (s === '') { s = '<p>No results.</p>'; }
+      document.getElementById('results').innerHTML = s;
+    });
   }
 
   function getByDesc() {
@@ -150,9 +190,19 @@ var idbApp = (function () {
     var range = IDBKeyRange.only(key);
     var s = '';
     dbPromise.then(function (db) {
-
-      // TODO 4.4b - get items by their description
-
+      var tx = db.transaction('products', 'readonly');
+      var store = tx.objectStore('products');
+      var index = store.index('description');
+      return index.openCursor(range);
+    }).then(function showRange(cursor) {
+      if (!cursor) { return; }
+      console.log('Cursored at:', cursor.value.name);
+      s += '<h2>Price - ' + cursor.value.price + '</h2><p>';
+      for (var field in cursor.value) {
+        s += field + '=' + cursor.value[field] + '<br/>';
+      }
+      s += '</p>';
+      return cursor.continue().then(showRange);
     }).then(function () {
       if (s === '') { s = '<p>No results.</p>'; }
       document.getElementById('results').innerHTML = s;
